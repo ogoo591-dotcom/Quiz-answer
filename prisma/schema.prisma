@@ -1,12 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
 
 generator client {
@@ -14,30 +8,24 @@ generator client {
 }
 
 model Article {
-  id        String      @id @default(cuid())
+  id        String      @id @unique @default(cuid())
   title     String
   content   String
   summary   String
-
   userId    String
   user      User        @relation(fields: [userId], references: [id])
-
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
-
   quizzes   Quiz[]
 }
 
 model User {
-  id          String        @id @default(cuid())
+  id        String      @id @unique @default(cuid())
   clerkId     String        @unique
   email       String        @unique
   name        String?
-
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-
-  // Relations
   articles     Article[]
   quizAttempts QuizAttempt[]
   userScores   UserScore[]
@@ -48,38 +36,31 @@ model Quiz {
   question  String
   options   String[]
   answer    String
-
   articleId String
   article   Article     @relation(fields: [articleId], references: [id])
-
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
-
   quizAttempts QuizAttempt[]
   userScores   UserScore[]
 }
 
 model QuizAttempt {
-  id        String   @id @default(cuid())
+  id        String      @id @unique @default(cuid())
   userId    String
   quizId    String
-  selected  String   // → хэрэглэгчийн сонгосон хариулт
+  selected  String   
   isCorrect Boolean
-
   createdAt DateTime @default(now())
-
   user      User     @relation(fields: [userId], references: [id])
   quiz      Quiz     @relation(fields: [quizId], references: [id])
 }
 
 model UserScore {
-  id        String   @id @default(cuid())
+    id        String      @id @unique @default(cuid())
   userId    String
   quizId    String
   score     Int
-
   createdAt DateTime @default(now())
-
   user      User     @relation(fields: [userId], references: [id])
   quiz      Quiz     @relation(fields: [quizId], references: [id])
 }

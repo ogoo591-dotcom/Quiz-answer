@@ -1,13 +1,35 @@
 "use client";
 
-export const Header = () => {
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
+
+export default function Header() {
   return (
-    <div className="h-20 w-full flex flex-wrap bg-gray-50 border-b justify-between items-center">
-      <h1 className="font-bold ml-10 text-2xl text-black">Quiz app</h1>
-      <img
-        src={"/Zurag.jpg"}
-        className="h-11 w-11 rounded-full border-none mr-8"
-      />
+    <div className="w-full flex flex-col items-center gap-6">
+      <h1 className="text-3xl font-bold">Quiz app</h1>
+
+      <div className="flex items-center gap-4">
+        <SignedOut>
+          <SignInButton mode="redirect">
+            <button className="text-black font-medium">Sign in</button>
+          </SignInButton>
+
+          <SignUpButton mode="redirect">
+            <button className="bg-[#6c47ff] text-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
+              Sign Up
+            </button>
+          </SignUpButton>
+        </SignedOut>
+
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
+      </div>
     </div>
   );
-};
+}

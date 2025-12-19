@@ -1,11 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /* config options here */
   reactCompiler: true,
-  env: {
-    DATABASE_URL: process.env.DATABASE_URL || "",
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
-  },
 };
 
 export default nextConfig;
