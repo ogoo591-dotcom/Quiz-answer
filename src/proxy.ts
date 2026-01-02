@@ -1,6 +1,10 @@
+import { RedirectToSignIn } from "@clerk/nextjs";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 
-export default clerkMiddleware();
+export default clerkMiddleware(async (auth) => {
+  const session = await auth();
+  if (!session.userId) return session.redirectToSignIn();
+});
 
 export const config = {
   matcher: [

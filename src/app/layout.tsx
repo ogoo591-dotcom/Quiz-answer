@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import prisma from "@/lib/prisma";
-import Sidebar from "./_components/Sidebar";
+import Header from "./_components/Header";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "./_components/AppSidebar";
+import { CreateUser } from "./_components/CreateUser";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -15,23 +17,29 @@ export const metadata: Metadata = {
   title: "Quiz app",
   description: "Article → Summary → Quiz",
 };
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const articles = await prisma.article.findMany({
-    orderBy: { createdAt: "desc" },
-    select: { id: true, title: true },
-  });
   return (
     <ClerkProvider>
       <html lang="en">
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white`}
         >
-          {children}
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset className="min-h-screen">
+              <header className="sticky top-0 z-50 h-16 border-b bg-white">
+                <Header />
+              </header>
+              <main className="p-6">
+                <CreateUser />
+                {children}
+              </main>
+            </SidebarInset>
+          </SidebarProvider>
         </body>
       </html>
     </ClerkProvider>

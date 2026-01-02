@@ -1,15 +1,18 @@
 import prisma from "@/lib/prisma";
+import { NextRequest } from "next/server";
 
-export const POST = async (request: Request) => {
+export const POST = async (req: NextRequest) => {
+  const { email, name, clerkId } = await req.json();
   try {
-    const body = await request.json();
     const user = await prisma.user.create({
-      data: body,
+      data: {
+        email,
+        name,
+        clerkId,
+      },
     });
-
-    return Response.json({ user }, { status: 201 });
+    return new Response(JSON.stringify({ message: "Success", data: user }));
   } catch (error) {
-    console.log(error);
-    return new Response("Failed to fetch all articles", { status: 500 });
+    return new Response("Failed");
   }
 };

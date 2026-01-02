@@ -13,14 +13,14 @@ model Article {
   content   String
   summary   String
   userId    String
-  user      User        @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [clerkId])
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   quizzes   Quiz[]
 }
 
 model User {
-  id        String      @id @unique @default(cuid())
+  id        String      @id @default(cuid())
   clerkId     String        @unique
   email       String        @unique
   name        String?

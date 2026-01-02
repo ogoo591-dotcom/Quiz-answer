@@ -1,17 +1,18 @@
-"use client";
-
-interface Props {
+export function HistoryItem({
+  title,
+  onClick,
+}: {
   title: string;
   onClick: () => void;
-}
-
-export function HistoryItem({ title, onClick }: Props) {
+}) {
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className="text-[15px] text-black hover:bg-gray-100 px-2 py-2 rounded cursor-pointer"
+      className="w-full text-left px-2 py-1 rounded hover:bg-gray-100 group-data-[collapsible=icon]:hidden"
+      title={title}
     >
       {title}
-    </div>
+    </button>
   );
 }

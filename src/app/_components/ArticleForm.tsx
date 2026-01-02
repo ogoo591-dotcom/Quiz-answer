@@ -35,22 +35,13 @@ export default function ArticleForm({ onCreated }: Props) {
   const { user, isLoaded } = useUser();
   const router = useRouter();
 
-  const safeReadJson = async (res: Response) => {
-    try {
-      return await res.json();
-    } catch {
-      const text = await res.text().catch(() => "");
-      return { error: text || "Invalid server response" };
-    }
-  };
-
   const handleGenerate = async () => {
     if (!isLoaded) return;
     if (!user?.id) {
       setError("Please sign in first.");
       return;
     }
-    if (!title.trim() || !content.trim()) {
+    if (!title || !content) {
       setError("Title and content are required.");
       return;
     }
@@ -58,47 +49,30 @@ export default function ArticleForm({ onCreated }: Props) {
     try {
       setIsGenerating(true);
       setError(null);
-
       const payload = {
         title,
         content,
-        userId: user.id,
-        email: user.primaryEmailAddress?.emailAddress,
-        name: user.fullName,
+        clerkId: user?.id,
       };
 
-      let lastError: string | null = null;
+      const res = await fetch("/api/articles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const res = await fetch("/api/articles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+      const data = await res.json();
 
-        const data = await safeReadJson(res);
-
-        if (res.ok) {
-          const created: Article | undefined = data?.article;
-          if (!created?.id) throw new Error("API did not return article");
-
-          setArticle(created);
-          setStep("summary");
-          setShowFullContent(false);
-          onCreated?.(created);
-          router.refresh();
-          return;
-        }
-        if (res.status === 503) {
-          lastError =
-            data?.error || "Service temporarily unavailable. Retrying...";
-          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
-          continue;
-        }
-        throw new Error(data?.error || `Request failed: ${res.status}`);
+      if (res.ok) {
+        const created: Article | undefined = data?.article;
+        if (!created?.id) throw new Error("API did not return article");
+        setArticle(created);
+        setStep("summary");
+        setShowFullContent(false);
+        onCreated?.(created);
+        router.push(`/article/${created?.id}`);
+        return;
       }
-
-      throw new Error(lastError || "Service unavailable. Please try again.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -106,17 +80,9 @@ export default function ArticleForm({ onCreated }: Props) {
     }
   };
 
-  const backToForm = () => {
-    setStep("form");
-    setArticle(null);
-    setShowFullContent(false);
-    setError(null);
-    setTitle("");
-    setContent("");
-  };
   if (step === "summary" && article) {
     return (
-      <div className="bg-white shadow-sm p-6 rounded-xl border w-full">
+      <div className="bg-white shadow-sm p-6 rounded-xl border w-[1000px]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <LuSparkles className="w-5 h-5 text-slate-700" />
@@ -124,13 +90,6 @@ export default function ArticleForm({ onCreated }: Props) {
               Article Quiz Generator
             </h2>
           </div>
-
-          <button
-            onClick={backToForm}
-            className="px-3 py-2 rounded-lg border hover:bg-slate-50 text-slate-900"
-          >
-            Back
-          </button>
         </div>
 
         <div className="mt-4 flex items-center gap-2 text-slate-600">
@@ -161,7 +120,7 @@ export default function ArticleForm({ onCreated }: Props) {
           </button>
 
           <button
-            onClick={() => router.push(`/quiz/${article.id}`)} // ✅ эндээ route-оо тааруул
+            onClick={() => router.push(`/article/${article.id}/quiz`)}
             className="px-6 py-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold"
           >
             Take a quiz
@@ -170,8 +129,9 @@ export default function ArticleForm({ onCreated }: Props) {
       </div>
     );
   }
+
   return (
-    <div className="bg-white shadow-sm p-6 rounded-xl border w-full">
+    <div className="bg-white shadow-sm p-6 rounded-xl border w-[1000px]">
       <div className="flex items-center gap-2">
         <LuSparkles className="w-5 h-5 text-slate-700" />
         <h2 className="text-xl font-semibold text-slate-900">
