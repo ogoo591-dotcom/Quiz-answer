@@ -1,42 +1,52 @@
 import prisma from "@/lib/prisma";
-
-export const GET = async (req: Request) => {
+import { GoogleGenAI } from "@google/genai";
+const ai = new GoogleGenAI({
+  apiKey: process.env.KEY,
+});
+export const POST = async (request: Request) => {
   try {
-    const articles = await prisma.article.findMany();
-    return Response.json({ articles }, { status: 200 });
-  } catch (err) {
-    console.log(err);
-    return Response.json(
-      { error: "Failed to fetch articles" },
-      { status: 500 }
+    const { title, content, userId } = await request.json();
+    const user = await prisma.user.findFirst({ where: { clerkId: userId } });
+    const res = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `this article is article please summarize to me this: ${content}`,
+    });
+    const { candidates } = res as any;
+    const summary = candidates[0].content.parts[0].text;
+    console.log(summary, "sad");
+    const article = await prisma.article.create({
+      data: {
+        title: title,
+        content: content,
+        userId: user?.id || "",
+        summary: summary,
+      },
+    });
+    return new Response(JSON.stringify({ result: article }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error(error);
+    return new Response(
+      JSON.stringify({ message: "Failed to create article" }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
 };
-
-export const POST = async (req: Request) => {
+export const GET = async () => {
   try {
-    const { clerkId, title, content, summary } = await req.json();
+    const articles = await prisma.article.findMany();
 
-    const user = await prisma.user.findFirst({ where: { clerkId } });
-    if (!user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const article = await prisma.article.create({
-      data: {
-        userId: user.id,
-        title: title ?? "",
-        content: content ?? "",
-        summary: summary ?? "",
-      },
+    return new Response(JSON.stringify({ articles }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
     });
-
-    return new Response(JSON.stringify({ article }), { status: 201 });
-  } catch (err: any) {
-    console.log(err);
-    return Response.json(
-      { error: "Failed to create article" },
-      { status: 500 }
+  } catch (error) {
+    console.error(error);
+    return new Response(
+      JSON.stringify({ message: "Failed to fetch all articles" }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
 };

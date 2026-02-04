@@ -1,18 +1,41 @@
 import prisma from "@/lib/prisma";
-import { NextRequest } from "next/server";
 
-export const POST = async (req: NextRequest) => {
-  const { email, name, clerkId } = await req.json();
+export const POST = async (request: Request) => {
   try {
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        clerkId,
-      },
+    const body = await request.json();
+
+    const existingUser = await prisma.user.findFirst({
+      where: { clerkId: body.clerkId },
     });
-    return new Response(JSON.stringify({ message: "Success", data: user }));
+    if (existingUser) return new Response("User exists");
+    const user = await prisma.user.create({ data: body });
+
+    return new Response(JSON.stringify({ user }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
-    return new Response("Failed");
+    console.error(error);
+    return new Response(
+      JSON.stringify({ message: "Failed to create article" }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+};
+
+export const GET = async () => {
+  try {
+    const articles = await prisma.user.findMany();
+
+    return new Response(JSON.stringify({ articles }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error(error);
+    return new Response(
+      JSON.stringify({ message: "Failed to fetch all articles" }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
   }
 };
