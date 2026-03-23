@@ -32,7 +32,7 @@ export function AppSidebar() {
   useEffect(() => {
     if (!isLoaded || !user?.id) return;
 
-    (async () => {
+    const loadArticles = async () => {
       try {
         setError(null);
         const res = await fetch(`/api/articles?clerkId=${user.id}`, {
@@ -45,7 +45,17 @@ export function AppSidebar() {
         setError(e instanceof Error ? e.message : "Something went wrong");
         setItems([]);
       }
-    })();
+    };
+
+    loadArticles();
+    const refreshHandler = () => {
+      void loadArticles();
+      window.setTimeout(() => {
+        void loadArticles();
+      }, 250);
+    };
+    window.addEventListener("articles:refresh", refreshHandler);
+    return () => window.removeEventListener("articles:refresh", refreshHandler);
   }, [isLoaded, user?.id]);
 
   return (

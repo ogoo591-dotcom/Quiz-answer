@@ -63,10 +63,10 @@ export default function QuizPage() {
         setBusy(true);
         setError(null);
 
-        const res = await fetch("/api/generate", {
+        const res = await fetch(`/api/generate/${articleId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: article.content, articleId }),
+          body: JSON.stringify({ content: article.content }),
         });
 
         const data = await res.json().catch(() => ({}));
@@ -93,7 +93,7 @@ export default function QuizPage() {
         setBusy(false);
       }
     })();
-  }, [articleId]);
+  }, [article?.content, articleId, busy, quiz]);
 
   const questions = quiz?.questions ?? [];
   const total = questions.length || 5;
@@ -109,11 +109,6 @@ export default function QuizPage() {
     return s;
   }, [quiz, picked]);
 
-  const done =
-    quiz &&
-    quiz.questions.length > 0 &&
-    Object.keys(picked).length === quiz.questions.length;
-
   const closeClicked = () => setShowCancel(true);
 
   const restart = () => {
@@ -123,7 +118,9 @@ export default function QuizPage() {
   };
 
   const cancelQuiz = () => {
-    restart();
+    if (!showResult) {
+      restart();
+    }
     router.back();
   };
 
@@ -187,7 +184,7 @@ export default function QuizPage() {
             </div>
 
             <button
-              onClick={() => router.back()}
+              onClick={closeClicked}
               className="h-10 w-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center"
               aria-label="Close"
             >

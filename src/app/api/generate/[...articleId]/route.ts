@@ -1,13 +1,45 @@
 import prisma from "@/lib/prisma";
+import { fallbackStore } from "@/lib/fallback-store";
 import { GoogleGenAI } from "@google/genai";
-const ai = new GoogleGenAI({
-  apiKey: process.env.KEY!,
-});
-export const POST = async (request: Request) => {
+import { NextResponse } from "next/server";
+
+const geminiApiKey =
+  process.env.GEMINI_API_KEY ?? process.env.KEY ?? process.env.GEMINI;
+const ai = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
+
+type LetterKey = "A" | "B" | "C" | "D";
+type NumericKey = "1" | "2" | "3" | "4";
+type GeneratedQuestion = {
+  question: string;
+  options: Record<LetterKey, string>;
+  answer: LetterKey;
+};
+
+const LETTERS: LetterKey[] = ["A", "B", "C", "D"];
+const NUMERIC_KEYS: NumericKey[] = ["1", "2", "3", "4"];
+
+export const POST = async (
+  request: Request,
+  { params }: { params: Promise<{ articleId: string[] }> },
+) => {
   try {
-    const { content, articleId } = await request.json();
+    if (!ai) {
+      return new Response(
+        JSON.stringify({ message: "Gemini API key is missing in environment" }),
+        { status: 500 },
+      );
+    }
+
+    const { articleId: articlePath } = await params;
+    const articleId = articlePath?.[0];
+    const { content } = await request.json();
     if (!content) {
       return new Response(JSON.stringify({ message: "Content is required" }), {
+        status: 400,
+      });
+    }
+    if (!articleId) {
+      return new Response(JSON.stringify({ message: "articleId is required" }), {
         status: 400,
       });
     }
@@ -62,7 +94,7 @@ ${content}
         { status: 500 },
       );
     }
-    let quiz;
+    let quiz: { questions: GeneratedQuestion[] };
     try {
       const cleaned = quizText.match(/\{[\s\S]*\}/)?.[0];
       if (!cleaned) throw new Error("No JSON found");
@@ -73,52 +105,116 @@ ${content}
         { status: 500 },
       );
     }
-    const createdQuizzes = await prisma.$transaction(
-      quiz.questions.map((q: any) => {
-        const correctAnswerText = q.options[q.answer];
-        return prisma.quiz.create({
-          data: {
-            question: q.question,
-            options: Object.values(q.options),
-            answer: correctAnswerText,
-            articleId,
-          },
-        });
-      }),
+    if (!Array.isArray(quiz.questions) || quiz.questions.length !== 5) {
+      return new Response(
+        JSON.stringify({ message: "Invalid quiz size returned by Gemini" }),
+        { status: 500 },
+      );
+    }
+
+    const normalizedQuestions = quiz.questions.map((q) => {
+      const options = LETTERS.map((letter) => q.options?.[letter] ?? "").filter(
+        Boolean,
+      );
+      const answerText = q.options?.[q.answer];
+      return {
+        question: q.question,
+        options,
+        answerText,
+      };
+    });
+
+    const isValid = normalizedQuestions.every(
+      (q) => q.question && q.options.length === 4 && q.answerText,
     );
+    if (!isValid) {
+      return new Response(
+        JSON.stringify({ message: "Invalid quiz format returned" }),
+        { status: 500 },
+      );
+    }
+
+    let createdQuizzes;
+    try {
+      createdQuizzes = await prisma.$transaction(
+        normalizedQuestions.map((q) =>
+          prisma.quiz.create({
+            data: {
+              question: q.question,
+              options: q.options,
+              answer: q.answerText!,
+              articleId,
+            },
+          }),
+        ),
+      );
+    } catch {
+      createdQuizzes = fallbackStore.createQuizzes(
+        articleId,
+        normalizedQuestions.map((q) => ({
+          question: q.question,
+          options: q.options,
+          answer: q.answerText!,
+        })),
+      );
+    }
+
+    const responseQuiz = {
+      questions: createdQuizzes.map((q) => {
+        const answerIndex = Math.max(
+          0,
+          q.options.findIndex((opt) => opt === q.answer),
+        );
+        return {
+          question: q.question,
+          options: {
+            "1": q.options[0] ?? "",
+            "2": q.options[1] ?? "",
+            "3": q.options[2] ?? "",
+            "4": q.options[3] ?? "",
+          } as Record<NumericKey, string>,
+          answer: NUMERIC_KEYS[answerIndex],
+        };
+      }),
+    };
 
     return new Response(
       JSON.stringify({
         articleId,
-        quiz: createdQuizzes,
+        quiz: responseQuiz,
       }),
       {
         status: 200,
         headers: { "Content-Type": "application/json" },
       },
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("CREATE QUIZ ERROR:", error);
 
     return new Response(
       JSON.stringify({
         message: "Failed to create quiz",
-        error: error.message,
+        error: error instanceof Error ? error.message : "Unknown error",
       }),
       { status: 500 },
     );
   }
 };
-import { NextResponse } from "next/server";
+
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ articleId: string[] }> },
 ) {
   const { articleId } = await params;
   const id = articleId[0];
-  const quizzes = await prisma.quiz.findMany({
-    where: { articleId: id },
-  });
+  let quizzes;
+  try {
+    quizzes = await prisma.quiz.findMany({
+      where: { articleId: id },
+    });
+  } catch {
+    quizzes = fallbackStore.findQuizzesByArticleId(id);
+  }
 
   return NextResponse.json(quizzes);
 }

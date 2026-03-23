@@ -1,16 +1,13 @@
 "use client";
 
-import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
-import { useState } from "react";
-import ArticleForm, { Article } from "./_components/ArticleForm";
-import { SummaryCard } from "./_components/SummaryCard";
+import ArticleForm from "./_components/ArticleForm";
 
 export default function Home() {
-  const [selected, setSelected] = useState<Article | null>(null);
-
   return (
     <main className="min-h-screen bg-white">
-      <ArticleForm />
+      <div className="mx-auto w-full max-w-6xl px-2">
+        <ArticleForm />
+      </div>
     </main>
   );
 }

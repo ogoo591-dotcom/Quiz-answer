@@ -61,7 +61,7 @@ export default function ArticleForm({ onCreated }: Props) {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
         const created: Article | undefined = data?.article;
@@ -70,9 +70,13 @@ export default function ArticleForm({ onCreated }: Props) {
         setStep("summary");
         setShowFullContent(false);
         onCreated?.(created);
-        router.push(`/article/${created?.id}`);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("articles:refresh"));
+        }
         return;
       }
+
+      throw new Error(data?.error || data?.message || "Failed to create article");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -82,7 +86,7 @@ export default function ArticleForm({ onCreated }: Props) {
 
   if (step === "summary" && article) {
     return (
-      <div className="bg-white shadow-sm p-6 rounded-xl border w-[1000px]">
+      <div className="mx-auto w-full max-w-5xl rounded-xl border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <LuSparkles className="w-5 h-5 text-slate-700" />
@@ -105,18 +109,12 @@ export default function ArticleForm({ onCreated }: Props) {
           {article.summary || "No summary yet."}
         </p>
 
-        {showFullContent && (
-          <div className="mt-6 rounded-lg border bg-slate-50 p-4 text-slate-800 leading-7 whitespace-pre-wrap">
-            {article.content}
-          </div>
-        )}
-
         <div className="mt-8 flex items-center justify-between">
           <button
-            onClick={() => setShowFullContent((v) => !v)}
+            onClick={() => setShowFullContent(true)}
             className="px-5 py-3 rounded-lg border bg-white hover:bg-slate-50 text-slate-900 font-medium"
           >
-            {showFullContent ? "Hide content" : "See content"}
+            See content
           </button>
 
           <button
@@ -126,12 +124,31 @@ export default function ArticleForm({ onCreated }: Props) {
             Take a quiz
           </button>
         </div>
+
+        {showFullContent && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+            <div className="w-full max-w-3xl bg-white rounded-2xl shadow-lg border p-6 relative">
+              <button
+                type="button"
+                onClick={() => setShowFullContent(false)}
+                className="absolute top-4 right-4 w-10 h-10 rounded-lg border hover:bg-gray-50"
+              >
+                ✕
+              </button>
+
+              <h2 className="text-2xl font-bold mb-3">{article.title}</h2>
+              <div className="whitespace-pre-wrap leading-7 text-slate-800 max-h-[70vh] overflow-auto">
+                {article.content}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="bg-white shadow-sm p-6 rounded-xl border w-[1000px]">
+    <div className="mx-auto w-full max-w-5xl rounded-xl border bg-white p-6 shadow-sm">
       <div className="flex items-center gap-2">
         <LuSparkles className="w-5 h-5 text-slate-700" />
         <h2 className="text-xl font-semibold text-slate-900">

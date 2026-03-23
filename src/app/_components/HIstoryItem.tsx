@@ -9,7 +9,7 @@ export function HistoryItem({
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left px-2 py-1 rounded hover:bg-gray-100 group-data-[collapsible=icon]:hidden"
+      className="w-full rounded px-2 py-1.5 text-left text-base leading-6 hover:bg-gray-100 group-data-[collapsible=icon]:hidden"
       title={title}
     >
       {title}

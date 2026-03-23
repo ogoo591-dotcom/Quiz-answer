@@ -6,13 +6,18 @@ export const CreateUser = () => {
   const { user } = useUser();
 
   const createUser = async () => {
+    const email = user?.primaryEmailAddress?.emailAddress;
+    const clerkId = user?.id;
+    if (!email || !clerkId) return;
+
     try {
       await fetch("/api/user", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: user?.fullName,
-          email: user?.primaryEmailAddress?.emailAddress,
-          clerkId: user?.id,
+          email,
+          clerkId,
         }),
       });
     } catch (error) {

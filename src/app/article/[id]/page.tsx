@@ -19,22 +19,23 @@ export default function ArticlePage() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchArticle = async () => {
-    try {
-      const data = await (
-        await fetch(`/api/article/${id}`, {
-          method: "GET",
-        })
-      ).json();
-      setArticle(data.article);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   useEffect(() => {
-    fetchArticle();
-  }, []);
+    if (!id) return;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/article/${id}`, { method: "GET" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to fetch article");
+        }
+        setArticle(data.article);
+      } catch (err) {
+        console.error(err);
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
+    })();
+  }, [id]);
 
   if (error)
     return (
@@ -59,12 +60,12 @@ export default function ArticlePage() {
       <button
         type="button"
         onClick={() => router.push("/")}
-        className="mb-4 w-12 h-12 rounded-lg border bg-white hover:bg-slate-50 flex items-center justify-center"
+        className="mb-5 flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
       >
         ←
       </button>
 
-      <div className="bg-white shadow-sm p-8 rounded-2xl border max-w-4xl">
+      <div className="max-w-4xl rounded-2xl border bg-white p-8 shadow-sm">
         <div className="flex items-center gap-3">
           <span className="text-2xl">✨</span>
           <h2 className="text-2xl font-bold text-slate-900">
@@ -82,20 +83,33 @@ export default function ArticlePage() {
         </h1>
 
         <p className="mt-4 text-slate-800 leading-7">{article.summary}</p>
-        <div className="flex justify-end">
+
+        <div className="mt-8 flex items-center gap-2 text-slate-500">
+          <span className="text-base">📄</span>
+          <span className="font-medium">Article Content</span>
+        </div>
+
+        <p className="mt-2 text-slate-700 leading-7">
+          {article.content.length > 320
+            ? `${article.content.slice(0, 320).trim()}...`
+            : article.content}
+        </p>
+
+        <div className="mt-1 flex justify-end">
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="px-6 py-3  border-none hover:bg-slate-100 font-semibold"
+            className="px-3 py-1 text-sm font-semibold text-slate-700 hover:text-slate-900"
           >
             See more
           </button>
         </div>
+
         <div className="mt-10 flex items-center justify-between">
           <button
             type="button"
             onClick={() => router.push(`/article/${article.id}/quiz`)}
-            className="px-7 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold"
+            className="rounded-xl bg-slate-900 px-7 py-3 font-semibold text-white hover:bg-slate-800"
           >
             Take a quiz
           </button>
