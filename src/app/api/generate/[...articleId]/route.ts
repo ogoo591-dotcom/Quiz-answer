@@ -14,6 +14,15 @@ type GeneratedQuestion = {
   options: Record<LetterKey, string>;
   answer: LetterKey;
 };
+type StoredQuizRow = {
+  id: string;
+  articleId: string;
+  question: string;
+  options: string[];
+  answer: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 const LETTERS: LetterKey[] = ["A", "B", "C", "D"];
 const NUMERIC_KEYS: NumericKey[] = ["1", "2", "3", "4"];
@@ -134,7 +143,7 @@ ${content}
       );
     }
 
-    let createdQuizzes;
+    let createdQuizzes: StoredQuizRow[];
     try {
       createdQuizzes = await prisma.$transaction(
         normalizedQuestions.map((q) =>

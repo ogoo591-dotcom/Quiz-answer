@@ -7,49 +7,60 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 const rawDatabaseUrl = process.env.DATABASE_URL;
-if (!rawDatabaseUrl) {
-  throw new Error("DATABASE_URL is missing. Add it to your environment.");
-}
 
-const databaseUrl = (() => {
-  try {
-    const url = new URL(rawDatabaseUrl);
-    const isLocalHost =
-      url.hostname === "localhost" || url.hostname === "127.0.0.1";
+const prisma: PrismaClient = (() => {
+  if (!rawDatabaseUrl) {
+    return new Proxy(
+      {},
+      {
+        get() {
+          throw new Error("DATABASE_URL is missing");
+        },
+      },
+    ) as PrismaClient;
+  }
 
-    if (!isLocalHost && !url.searchParams.has("sslmode")) {
-      url.searchParams.set("sslmode", "require");
+  const databaseUrl = (() => {
+    try {
+      const url = new URL(rawDatabaseUrl);
+      const isLocalHost =
+        url.hostname === "localhost" || url.hostname === "127.0.0.1";
+
+      if (!isLocalHost && !url.searchParams.has("sslmode")) {
+        url.searchParams.set("sslmode", "require");
+      }
+      return url.toString();
+    } catch {
+      return rawDatabaseUrl;
     }
-    return url.toString();
-  } catch {
-    return rawDatabaseUrl;
-  }
-})();
+  })();
 
-const databaseHost = (() => {
-  try {
-    return new URL(databaseUrl).hostname;
-  } catch {
-    return "";
-  }
-})();
+  const databaseHost = (() => {
+    try {
+      return new URL(databaseUrl).hostname;
+    } catch {
+      return "";
+    }
+  })();
 
-const shouldUseInsecureSsl =
-  databaseHost.length > 0 &&
-  databaseHost !== "localhost" &&
-  databaseHost !== "127.0.0.1";
+  const shouldUseInsecureSsl =
+    databaseHost.length > 0 &&
+    databaseHost !== "localhost" &&
+    databaseHost !== "127.0.0.1";
 
-const adapter = new PrismaPg({
-  connectionString: databaseUrl,
-  ssl: shouldUseInsecureSsl ? { rejectUnauthorized: false } : undefined,
-});
-
-const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    adapter,
+  const adapter = new PrismaPg({
+    connectionString: databaseUrl,
+    ssl: shouldUseInsecureSsl ? { rejectUnauthorized: false } : undefined,
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+  const client =
+    globalForPrisma.prisma ??
+    new PrismaClient({
+      adapter,
+    });
+
+  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = client;
+  return client;
+})();
 
 export default prisma;
