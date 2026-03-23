@@ -29,12 +29,16 @@ export const POST = async (request: Request) => {
 
     let summary = "";
     if (ai) {
-      const res = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: `Summarize this article:\n\n${content}`,
-      });
-      const parsed = res as GeminiSummaryResponse;
-      summary = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      try {
+        const res = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: `Summarize this article:\n\n${content}`,
+        });
+        const parsed = res as GeminiSummaryResponse;
+        summary = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      } catch (error) {
+        console.error("Gemini summarize failed, using fallback summary:", error);
+      }
     }
 
     if (!summary) {
