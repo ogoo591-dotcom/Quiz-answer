@@ -3,6 +3,9 @@ import { fallbackStore } from "@/lib/fallback-store";
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const geminiApiKey =
   process.env.GEMINI_API_KEY ?? process.env.KEY ?? process.env.GEMINI;
 const ai = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
@@ -58,10 +61,14 @@ export const POST = async (
   request: Request,
   { params }: { params: Promise<{ articleId: string[] }> },
 ) => {
+  let safeContent = "";
+  let safeArticleId = "";
   try {
     const { articleId: articlePath } = await params;
     const articleId = articlePath?.[0];
     const { content } = await request.json();
+    safeContent = typeof content === "string" ? content : "";
+    safeArticleId = articleId ?? "";
     if (!content) {
       return new Response(JSON.stringify({ message: "Content is required" }), {
         status: 400,
@@ -230,12 +237,28 @@ ${content}
   } catch (error) {
     console.error("CREATE QUIZ ERROR:", error);
 
+    const fallback = buildFallbackQuiz(safeContent || "General knowledge content");
     return new Response(
       JSON.stringify({
-        message: "Failed to create quiz",
-        error: error instanceof Error ? error.message : "Unknown error",
+        articleId: safeArticleId || "fallback-article",
+        quiz: {
+          questions: fallback.questions.map((q) => ({
+            question: q.question,
+            options: {
+              "1": q.options.A,
+              "2": q.options.B,
+              "3": q.options.C,
+              "4": q.options.D,
+            } as Record<NumericKey, string>,
+            answer: "1" as NumericKey,
+          })),
+        },
+        fallback: true,
       }),
-      { status: 500 },
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+      },
     );
   }
 };
