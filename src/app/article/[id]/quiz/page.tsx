@@ -31,6 +31,7 @@ export default function QuizPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCancel, setShowCancel] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [requestedOnce, setRequestedOnce] = useState(false);
 
   useEffect(() => {
     if (!articleId) return;
@@ -56,10 +57,11 @@ export default function QuizPage() {
   }, [articleId]);
 
   useEffect(() => {
-    if (!article?.content || quiz || busy) return;
+    if (!article?.content || quiz || requestedOnce) return;
 
     (async () => {
       try {
+        setRequestedOnce(true);
         setBusy(true);
         setError(null);
 
@@ -93,7 +95,7 @@ export default function QuizPage() {
         setBusy(false);
       }
     })();
-  }, [article?.content, articleId, busy, quiz]);
+  }, [article?.content, articleId, quiz, requestedOnce]);
 
   const questions = quiz?.questions ?? [];
   const total = questions.length || 5;
